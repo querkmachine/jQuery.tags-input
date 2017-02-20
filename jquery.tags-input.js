@@ -241,6 +241,16 @@
 				}
 			}).on('blur', (e) => {
 				$autoComplete.attr('aria-hidden', 'true');
+			}).on('keyup change paste', (e) => {
+				const value = this.$formInput.val().toLowerCase();
+				$autoComplete.children().each((i, item) => {
+					if($(item).text().toLowerCase().includes(value)) {
+						$(item).attr('aria-hidden', 'false');
+					}
+					else {
+						$(item).attr('aria-hidden', 'true');
+					}
+				});
 			});
 		},
 		doAutosize: function() {
