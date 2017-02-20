@@ -1,5 +1,5 @@
 /*
- * jQuery Tags Input 2.1.0
+ * jQuery Tags Input 2.2.0
  *
  * Developed by Kimberly Grey
  * https://github.com/querkmachine
@@ -25,7 +25,9 @@
 			form: 'tag-input__form',
 			formLabel: 'screenreader',
 			formInput: 'tag-input__input',
-			formInputInvalid: 'tag-input__input--invalid'
+			formInputInvalid: 'tag-input__input--invalid',
+			autoComplete: 'tag-input__autocomplete',
+			autoCompleteItem: 'tag-input__autocomplete-item'
 		},
 		formPosition: 'below',
 		interactive: true,
@@ -33,8 +35,8 @@
 		minChars: 0,
 		maxChars: false,
 		autoComplete: { 
-			url: '',
-			selectFirst: false 
+			source: '',
+			restrictive: false
 		},
 		hide: true,
 		delimiter: ',',
@@ -51,12 +53,14 @@
 		this._name = pluginName;
 		this.id = `${pluginName}-${Math.random().toString(36).substring(6)}`;
 
-		this.callbacks = [];
-
 		// Don't init if it's already been done 
 		if(typeof this.$element.data(`${pluginName}-init`) !== 'undefined') {
 			return;
 		};
+
+		this.autoCompleteOptions;
+		this.callbacks = [];
+
 		this.init();
 	};
 	$.extend(Plugin.prototype, {
@@ -130,10 +134,10 @@
 					$formInput.trigger('focus');
 				});
 
-				// If autocomplete is used... *UNTESTED*
-				if(typeof this.settings.autoComplete.url !== 'undefined') {
-					if(typeof jQuery.Autocompleter !== 'undefined') {
-						$formInput.autocomplete(this.settings.autoComplete.url, this.settings.autoComplete);
+				// If autocomplete is used... 
+				if(typeof this.settings.autoComplete.source !== 'undefined') {
+					if(typeof jQuery.autocompleter !== 'undefined') {
+						$formInput.autocompleter(this.settings.autoComplete);
 						$formInput.on('result', (e, data, formatted) => {
 							if(data) {
 								this.addTag(`${data[0]}`, {
@@ -143,23 +147,23 @@
 							};
 						});
 					}
-					else if(typeof jQuery.ui !== 'undefined' && typeof jQuery.ui.autocomplete !== 'undefined') {
-						$formInput.autocomplete(this.settings.autoComplete);
-						$formInput.on('autocompleteselect', (e, ui) => {
-							this.addTag(ui.item.value, {
-								focus: true,
-								unique: this.settings.unique
-							});
-							return false;
+					else {
+						$.ajax({
+							url: this.settings.autoComplete.source,
+							dataType: 'json'
+						}).done((data) => {
+							if(this.settings.debug) console.log('autoCompleteOptions', data);
+							this.autoCompleteOptions = data;
+							this.initAutoComplete();
 						});
 					}
-				}
+				};
 
 				// If the user presses the key for a delimiter character (e.g. a comma), add a tag
 				$formInput.on('keypress', (e) => {
 					if(this.checkDelimiter(e)) {
 						e.preventDefault();
-						if((this.settings.minChars) <= $formInput.val().length && (!this.settings.maxChars || this.settings.maxChars >= $formInput.val().length)) {
+						if((this.settings.minChars <= $formInput.val().length) && (!this.settings.maxChars || this.settings.maxChars >= $formInput.val().length)) {
 							this.addTag($formInput.val(), {
 								focus: true,
 								unique: this.settings.unique
@@ -183,18 +187,61 @@
 							$formInput.trigger('focus');
 						}
 					});
-				}
+				};
 
 				// Remove input error style if input value gets changed
 				if(this.settings.unique) {
 					$formInput.on('keydown', (e) => {
 						$formInput.removeClass(this.settings.classes.formInputInvalid);
 					});
-				}
+				};
 			};
 
 			// Add code to the DOM finally
 			this.$element.after($container);
+		},
+		initAutoComplete: function() {
+			const id = `${this.id}-autocomplete`;
+			const $autoComplete = $('<ul/>', {
+				'class': this.settings.classes.autoComplete,
+				'aria-live': 'polite',
+				'id': id,
+				'role': 'listbox'
+			});
+			$.each(this.autoCompleteOptions, (i, item) => {
+				const $autoCompleteItem = $('<li/>', {
+					'class': this.settings.classes.autoCompleteItem,
+					'tabindex': '0',
+					'text': item.label,
+					'role': 'option'
+				}).on('keydown', (e) => {
+					if(e.which != 13) { return; }
+					this.$formInput.val('');
+					this.addTag(item.label, {
+						focus: true
+					});
+				}).on('click', (e) => {
+					this.$formInput.val('');
+					this.addTag(item.label, {
+						focus: true
+					});
+				}).on('focus', function(e) {
+					$(`#${id}-selected`).removeAttr('id');
+					$(this).attr('id', `${id}-selected`);
+				});
+				$autoComplete.append($autoCompleteItem);
+			});
+			this.$formInput.after($autoComplete);
+			this.$formInput.attr('role', 'combobox').attr('aria-autocomplete', 'list').attr('aria-owns', id).attr('aria-activedescendant', `${id}-selected`).on('keyup focus', (e) => {
+				if(this.$formInput.val() != '') {
+					$autoComplete.attr('aria-hidden', 'false');
+				}
+				else {
+					$autoComplete.attr('aria-hidden', 'true');
+				}
+			}).on('blur', (e) => {
+				$autoComplete.attr('aria-hidden', 'true');
+			});
 		},
 		doAutosize: function() {
 			if(this.settings.debug) console.log('doAutosize')
@@ -228,6 +275,7 @@
 
 			// Combine default options with those passed
 			options = $.extend({
+				hiddenValue: false,
 				focus: false,
 				callback: false,
 				unique: this.settings.unique
@@ -253,6 +301,20 @@
 					return false;
 				};
 			};
+
+			// Check if tag is in the allowed options
+			if(this.settings.autoComplete.restrictive) {
+				const allowedValues = [];
+				console.log('addTag restrictive');
+				$.each(this.autoCompleteOptions, (i, item) => {
+					allowedValues.push(item.label.toLowerCase());
+				});
+				if($.inArray(value.toLowerCase(), allowedValues) == -1) {
+					console.log('addTag restrictive notPermitted')
+					this.$formInput.addClass(this.settings.classes.formInputInvalid);
+					return false;
+				}
+			}
 
 			// Add markup for the new tag
 			const $tag = $('<span/>', {
