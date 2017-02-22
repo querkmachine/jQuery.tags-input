@@ -73,10 +73,11 @@
 			this.$element.data(`${this._name}-init`, true);
 
 			// Setting up callbacks
-			if(this.settings.onAddTag || this.settings.onRemoveTag || this.settings.onChange) {
+			if(this.settings.onAddTag || this.settings.onRemoveTag || this.settings.onChange || this.settings.onError) {
 				this.callbacks['onAddTag'] = this.settings.onAddTag;
 				this.callbacks['onRemoveTag'] = this.settings.onRemoveTag;
 				this.callbacks['onChange'] = this.settings.onChange;
+				this.callbacks['onError'] = this.settings.onError;
 			}
 
 			// Hide the defaut text input
@@ -288,6 +289,11 @@
 		addTag: function(value, options) {
 			if(this.settings.debug) console.log('addTag', value, options);
 
+			let errorCallback = false;
+			if(this.callbacks && this.callbacks['onError']) {
+				errorCallback = this.callbacks['onError'];
+			}
+
 			// Combine default options with those passed
 			options = $.extend({
 				hiddenValue: false,
@@ -305,6 +311,10 @@
 			// Check if value actually has content
 			value = $.trim(value);
 			if(value === '') {
+				if(errorCallback) {
+					this.$formInput.addClass(this.settings.classes.formInputInvalid);
+					errorCallback.call(this, 'emptyvalue');
+				}
 				return false;
 			};
 
@@ -313,6 +323,9 @@
 				const skipTag = this.tagExists(value);
 				if(skipTag) {
 					this.$formInput.addClass(this.settings.classes.formInputInvalid);
+					if(errorCallback) {
+						errorCallback.call(this, 'notunique');
+					}
 					return false;
 				};
 			};
@@ -320,13 +333,14 @@
 			// Check if tag is in the allowed options
 			if(this.settings.autoComplete.restrictive) {
 				const allowedValues = [];
-				console.log('addTag restrictive');
 				$.each(this.autoCompleteOptions, (i, item) => {
 					allowedValues.push(item.label.toLowerCase());
 				});
 				if($.inArray(value.toLowerCase(), allowedValues) == -1) {
-					console.log('addTag restrictive notPermitted')
 					this.$formInput.addClass(this.settings.classes.formInputInvalid);
+					if(errorCallback) {
+						errorCallback.call(this, 'notpermitted');
+					}
 					return false;
 				}
 			}
