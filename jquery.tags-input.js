@@ -32,7 +32,7 @@
 		l10n: {
 			defaultText: 'Add a tag',
 			removeLabel: '&times;',
-			removeTitle: 'Remove tag \'{tag}\'',
+			removeTitle: 'Remove tag \'{tag}\''
 		},
 		formPosition: 'below',
 		interactive: true,
@@ -209,6 +209,7 @@
 			const $autoComplete = $('<ul/>', {
 				'class': this.settings.classes.autoComplete,
 				'aria-live': 'polite',
+				'aria-hidden': 'true',
 				'id': id,
 				'role': 'listbox'
 			});
@@ -243,8 +244,6 @@
 				else {
 					$autoComplete.attr('aria-hidden', 'true');
 				}
-			}).on('blur', (e) => {
-				$autoComplete.attr('aria-hidden', 'true');
 			}).on('keyup change paste', (e) => {
 				const value = this.$formInput.val().toLowerCase();
 				$autoComplete.children().each((i, item) => {
@@ -295,7 +294,7 @@
 			// Combine default options with those passed
 			options = $.extend({
 				focus: false,
-				callback: false,
+				callback: true,
 				unique: this.settings.unique,
 				valueChecks: true
 			}, options);
@@ -313,7 +312,7 @@
 				if(options.valueChecks && errorCallback) {
 					this.$formInput.addClass(this.settings.classes.formInputInvalid);
 					errorCallback.call(this, 'emptyvalue');
-					console.trace();
+					if(this.settings.debug) console.log('encountered error', 'emptyvalue');
 				}
 				return false;
 			};
@@ -325,6 +324,7 @@
 					this.$formInput.addClass(this.settings.classes.formInputInvalid);
 					if(errorCallback) {
 						errorCallback.call(this, 'notunique');
+						if(this.settings.debug) console.log('encountered error', 'notunique');
 					}
 					return false;
 				};
@@ -340,6 +340,7 @@
 					this.$formInput.addClass(this.settings.classes.formInputInvalid);
 					if(errorCallback) {
 						errorCallback.call(this, 'notpermitted');
+						if(this.settings.debug) console.log('encountered error', 'notpermitted');
 					}
 					return false;
 				}
@@ -377,7 +378,7 @@
 			};
 
 			// Fire callbacks
-			if(options.callbacks) {
+			if(options.callback) {
 				if(this.callbacks && this.callbacks['onAddTag']) {
 					let func = this.callbacks['onAddTag'];
 					func.call(this, value);
@@ -436,7 +437,8 @@
 			const tags = value.split(this.settings.delimiter);
 			for(let i = 0; i < tags.length; i++) {
 				this.addTag(tags[i], {
-					valueChecks: false
+					valueChecks: false,
+					callback: false
 				});
 			};
 		}
