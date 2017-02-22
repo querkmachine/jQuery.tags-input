@@ -414,8 +414,8 @@
 		},
 		tagExists: function(value) {
 			if(this.settings.debug) console.log('tagExists', value)
-			const tagsList = this.$element.val().split(this.settings.delimiter);
-			return ($.inArray(value, tagsList) >= 0);
+			const tagsList = this.$element.val().toLowerCase().split(this.settings.delimiter);
+			return ($.inArray(value.toLowerCase(), tagsList) >= 0);
 		},
 		checkDelimiter: function(event) {
 			if(this.settings.debug) console.log('checkDelimiter', event);
