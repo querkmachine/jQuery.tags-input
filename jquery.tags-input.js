@@ -1,5 +1,5 @@
 /*
- * jQuery Tags Input 2.2.0
+ * jQuery Tags Input 3.0.0
  *
  * Developed by Kimberly Grey
  * https://github.com/querkmachine
@@ -29,9 +29,13 @@
 			autoComplete: 'tag-input__autocomplete',
 			autoCompleteItem: 'tag-input__autocomplete-item'
 		},
+		l10n: {
+			defaultText: 'Add a tag',
+			removeLabel: '&times;',
+			removeTitle: 'Remove tag \'{tag}\'',
+		},
 		formPosition: 'below',
 		interactive: true,
-		defaultText: 'add a tag',
 		minChars: 0,
 		maxChars: false,
 		autoComplete: { 
@@ -48,7 +52,7 @@
 	};
 	function Plugin(element, options) {
 		this.$element = $(element);
-		this.settings = $.extend({}, defaults, options);
+		this.settings = $.extend(true, {}, defaults, options);
 		this._defaults = defaults;
 		this._name = pluginName;
 		this.id = `${pluginName}-${Math.random().toString(36).substring(6)}`;
@@ -61,6 +65,7 @@
 		this.autoCompleteOptions;
 		this.callbacks = [];
 
+		if(this.settings.debug) console.log('settings', this.settings);
 		this.init();
 	};
 	$.extend(Plugin.prototype, {
@@ -100,12 +105,12 @@
 				});
 				$formLabel = $('<label/>', {
 					'class': this.settings.classes.formLabel,
-					'text': this.settings.defaultText,
+					'text': this.settings.l10n.defaultText,
 					'for': this.id
 				});
 				$formInput = $('<input/>', {
 					'class': this.settings.classes.formInput,
-					'placeholder': this.settings.defaultText,
+					'placeholder': this.settings.l10n.defaultText,
 					'type': 'text',
 					'id': this.id
 				});
@@ -337,10 +342,9 @@
 			const $tagRemove = $('<button/>', {
 				'class': this.settings.classes.tagRemove,
 				'type': 'button',
-				'title': `Remove tag '${value}'`,
-				'aria-label': `Remove tag '${value}'`,
-				'text': 'Remove'
-			}).on('click', (e) => {
+				'title': this.settings.l10n.removeTitle.replace('{tag}', value),
+				'aria-label': this.settings.l10n.removeTitle.replace('{tag}', value)
+			}).html(this.settings.l10n.removeLabel.replace('{tag}', value)).on('click', (e) => {
 				this.removeTag(value);
 			});
 			this.$tagContainer.append($tag.append($tagLabel).append($tagRemove));
