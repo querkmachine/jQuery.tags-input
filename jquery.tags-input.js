@@ -147,8 +147,7 @@
 						$formInput.on('result', (e, data, formatted) => {
 							if(data) {
 								this.addTag(`${data[0]}`, {
-									focus: true,
-									unique: this.settings.unique
+									focus: true
 								});
 							};
 						});
@@ -171,8 +170,7 @@
 						e.preventDefault();
 						if((this.settings.minChars <= $formInput.val().length) && (!this.settings.maxChars || this.settings.maxChars >= $formInput.val().length)) {
 							this.addTag($formInput.val(), {
-								focus: true,
-								unique: this.settings.unique
+								focus: true
 							});
 						}
 						this.resetAutosize();
@@ -296,10 +294,10 @@
 
 			// Combine default options with those passed
 			options = $.extend({
-				hiddenValue: false,
 				focus: false,
 				callback: false,
-				unique: this.settings.unique
+				unique: this.settings.unique,
+				valueChecks: true
 			}, options);
 
 			// Set up tag array
@@ -308,18 +306,20 @@
 				tagsList = this.$element.val().split(this.settings.delimiter);
 			};
 
-			// Check if value actually has content
 			value = $.trim(value);
+
+			// Check if value actually has content
 			if(value === '') {
-				if(errorCallback) {
+				if(options.valueChecks && errorCallback) {
 					this.$formInput.addClass(this.settings.classes.formInputInvalid);
 					errorCallback.call(this, 'emptyvalue');
+					console.trace();
 				}
 				return false;
 			};
 
 			// Check if the tag is unique or not, reject it if not
-			if(options.unique) {
+			if(options.valueChecks && options.unique) {
 				const skipTag = this.tagExists(value);
 				if(skipTag) {
 					this.$formInput.addClass(this.settings.classes.formInputInvalid);
@@ -331,7 +331,7 @@
 			};
 
 			// Check if tag is in the allowed options
-			if(this.settings.autoComplete.restrictive) {
+			if(options.valueChecks && this.settings.autoComplete.restrictive) {
 				const allowedValues = [];
 				$.each(this.autoCompleteOptions, (i, item) => {
 					allowedValues.push(item.label.toLowerCase());
@@ -436,8 +436,7 @@
 			const tags = value.split(this.settings.delimiter);
 			for(let i = 0; i < tags.length; i++) {
 				this.addTag(tags[i], {
-					focus: false,
-					callback: false
+					valueChecks: false
 				});
 			};
 		}
