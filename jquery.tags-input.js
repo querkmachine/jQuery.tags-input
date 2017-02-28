@@ -12,7 +12,7 @@
  * 
  */
 
-;(function($, window, document, undefined) {
+; (function ($, window, document, undefined) {
 	'use strict';
 	const pluginName = 'tagsInput';
 	const defaults = {
@@ -38,7 +38,7 @@
 		interactive: true,
 		minChars: 0,
 		maxChars: false,
-		autoComplete: { 
+		autoComplete: {
 			source: '',
 			restrictive: false
 		},
@@ -58,22 +58,22 @@
 		this.id = `${pluginName}-${Math.random().toString(36).substring(6)}`;
 
 		// Don't init if it's already been done 
-		if(typeof this.$element.data(`${pluginName}-init`) !== 'undefined') {
+		if (typeof this.$element.data(`${pluginName}-init`) !== 'undefined') {
 			return;
 		};
 
 		this.autoCompleteOptions;
 		this.callbacks = [];
 
-		if(this.settings.debug) console.log('settings', this.settings);
+		if (this.settings.debug) console.log('settings', this.settings);
 		this.init();
 	};
 	$.extend(Plugin.prototype, {
-		init: function() {
+		init: function () {
 			this.$element.data(`${this._name}-init`, true);
 
 			// Setting up callbacks
-			if(this.settings.onAddTag || this.settings.onRemoveTag || this.settings.onChange || this.settings.onError) {
+			if (this.settings.onAddTag || this.settings.onRemoveTag || this.settings.onChange || this.settings.onError) {
 				this.callbacks['onAddTag'] = this.settings.onAddTag;
 				this.callbacks['onRemoveTag'] = this.settings.onRemoveTag;
 				this.callbacks['onChange'] = this.settings.onChange;
@@ -81,16 +81,16 @@
 			}
 
 			// Hide the defaut text input
-			if(this.settings.hide) {
+			if (this.settings.hide) {
 				this.$element.hide();
 			};
 
 			// Generate initial markup
 			let $container,
-			    $tagContainer,
-			    $form,
-			    $formLabel,
-			    $formInput;
+				$tagContainer,
+				$form,
+				$formLabel,
+				$formInput;
 			$container = $('<div/>', {
 				'class': this.settings.classes.container
 			});
@@ -100,7 +100,7 @@
 			this.$container = $container;
 			this.$tagContainer = $tagContainer;
 			$container.append($tagContainer);
-			if(this.settings.interactive) {
+			if (this.settings.interactive) {
 				$form = $('<div/>', {
 					'class': this.settings.classes.form
 				});
@@ -119,7 +119,7 @@
 				this.$formLabel = $formLabel;
 				this.$formInput = $formInput;
 				$form.append($formLabel).append($formInput);
-				if(this.settings.formPosition === 'above') {
+				if (this.settings.formPosition === 'above') {
 					$container.prepend($form);
 				}
 				else {
@@ -128,11 +128,11 @@
 			}
 
 			// Populate any tags already set
-			if(this.$element.val() != '') {
+			if (this.$element.val() != '') {
 				this.importTags(this.$element, this.$element.val());
 			};
 
-			if(this.settings.interactive) {
+			if (this.settings.interactive) {
 				this.resetAutosize();
 
 				// Focus the input if the user clicks anywhere on the control
@@ -141,11 +141,11 @@
 				});
 
 				// If autocomplete is used... 
-				if(typeof this.settings.autoComplete.source !== 'undefined') {
-					if(typeof jQuery.autocompleter !== 'undefined') {
+				if (typeof this.settings.autoComplete.source !== 'undefined') {
+					if (typeof jQuery.autocompleter !== 'undefined') {
 						$formInput.autocompleter(this.settings.autoComplete);
 						$formInput.on('result', (e, data, formatted) => {
-							if(data) {
+							if (data) {
 								this.addTag(`${data[0]}`, {
 									focus: true
 								});
@@ -157,7 +157,7 @@
 							url: this.settings.autoComplete.source,
 							dataType: 'json'
 						}).done((data) => {
-							if(this.settings.debug) console.log('autoCompleteOptions', data);
+							if (this.settings.debug) console.log('autoCompleteOptions', data);
 							this.autoCompleteOptions = data;
 							this.initAutoComplete();
 						});
@@ -166,25 +166,36 @@
 
 				// If the user presses the key for a delimiter character (e.g. a comma), add a tag
 				$formInput.on('keypress', (e) => {
-					if(this.checkDelimiter(e)) {
+					if(this.settings.debug) console.log('event keypress');
+					if(this.settings.debug) console.log(this.checkDelimiter(e));
+					if (this.checkDelimiter(e)) {
 						e.preventDefault();
-						if((this.settings.minChars <= $formInput.val().length) && (!this.settings.maxChars || this.settings.maxChars >= $formInput.val().length)) {
-							this.addTag($formInput.val(), {
-								focus: true
-							});
-						}
+						this.addTag($formInput.val(), {
+							focus: true
+						});
 						this.resetAutosize();
-						return false;
+						return;
 					}
-					else if(this.settings.autosize) {
+					else if (this.settings.autosize) {
 						this.doAutosize();
 					}
 				});
 
+				$formInput.on('paste', (e) => {
+					if(this.settings.debug) console.log('event paste');
+					setTimeout(() => {
+						const value = $formInput.val();
+						this.importTags($formInput, value, {
+							valueChecks: true
+						});
+					}, 0); 
+				});
+
 				// If the user presses backspace on an empty input, delete the last tag
-				if(this.settings.removeWithBackspace) {
+				if (this.settings.removeWithBackspace) {
 					$formInput.on('keydown', (e) => {
-						if(e.which === 8 && $formInput.val() === '') {
+						if(this.settings.debug) console.log('event keydown (backspace)');
+						if (e.which === 8 && $formInput.val() === '') {
 							e.preventDefault();
 							const lastTag = this.$tagContainer.find(`.${this.settings.classes.tag}:last .${this.settings.classes.tagLabel}`).text();
 							this.removeTag(lastTag);
@@ -194,8 +205,9 @@
 				};
 
 				// Remove input error style if input value gets changed
-				if(this.settings.unique) {
+				if (this.settings.unique) {
 					$formInput.on('keydown', (e) => {
+						if(this.settings.debug) console.log('event keydown (clear error state)');
 						$formInput.removeClass(this.settings.classes.formInputInvalid);
 					});
 				};
@@ -204,7 +216,7 @@
 			// Add code to the DOM finally
 			this.$element.after($container);
 		},
-		initAutoComplete: function() {
+		initAutoComplete: function () {
 			const id = `${this.id}-autocomplete`;
 			const $autoComplete = $('<ul/>', {
 				'class': this.settings.classes.autoComplete,
@@ -220,7 +232,7 @@
 					'text': item.label,
 					'role': 'option'
 				}).on('keydown', (e) => {
-					if(e.which != 13) { return; }
+					if (e.which != 13) { return; }
 					this.$formInput.val('');
 					this.addTag(item.label, {
 						focus: true
@@ -230,7 +242,7 @@
 					this.addTag(item.label, {
 						focus: true
 					});
-				}).on('focus', function(e) {
+				}).on('focus', function (e) {
 					$(`#${id}-selected`).removeAttr('id');
 					$(this).attr('id', `${id}-selected`);
 				});
@@ -238,7 +250,7 @@
 			});
 			this.$formInput.after($autoComplete);
 			this.$formInput.attr('role', 'combobox').attr('aria-autocomplete', 'list').attr('aria-owns', id).attr('aria-activedescendant', `${id}-selected`).on('keyup focus', (e) => {
-				if(this.$formInput.val() != '') {
+				if (this.$formInput.val() != '') {
 					$autoComplete.attr('aria-hidden', 'false');
 				}
 				else {
@@ -247,7 +259,7 @@
 			}).on('keyup change paste', (e) => {
 				const value = this.$formInput.val().toLowerCase();
 				$autoComplete.children().each((i, item) => {
-					if($(item).text().toLowerCase().includes(value)) {
+					if ($(item).text().toLowerCase().includes(value)) {
 						$(item).attr('aria-hidden', 'false');
 					}
 					else {
@@ -256,17 +268,17 @@
 				});
 			});
 		},
-		doAutosize: function() {
-			if(this.settings.debug) console.log('doAutosize')
-			if(this.$formInput.val() === '') { return; }
+		doAutosize: function () {
+			if (this.settings.debug) console.log('doAutosize')
+			if (this.$formInput.val() === '') { return; }
 			this.$formInput.on('keyup paste', (e) => {
 				const width = $(`#${this.id}-tester`).html(this.$formInput.val()).width() + this.settings.comfortZone;
 				this.$formInput.width(width);
 			});
 		},
-		resetAutosize: function() {
-			if(this.settings.debug) console.log('resetAutosize')
-			if(!$(`#${this.id}-tester`).length) {
+		resetAutosize: function () {
+			if (this.settings.debug) console.log('resetAutosize')
+			if (!$(`#${this.id}-tester`).length) {
 				const $formInputDummy = $('<span/>').css({
 					'position': 'absolute',
 					'top': '-9999px',
@@ -281,13 +293,13 @@
 				$('body').append($formInputDummy);
 				return;
 			};
-			$(`#${this.id}-tester`).css({'width': 'auto'});
+			$(`#${this.id}-tester`).css({ 'width': 'auto' });
 		},
-		addTag: function(value, options) {
-			if(this.settings.debug) console.log('addTag', value, options);
+		addTag: function (value, options) {
+			if (this.settings.debug) console.log('addTag', value, options);
 
 			let errorCallback = false;
-			if(this.callbacks && this.callbacks['onError']) {
+			if (this.callbacks && this.callbacks['onError']) {
 				errorCallback = this.callbacks['onError'];
 			}
 
@@ -301,46 +313,62 @@
 
 			// Set up tag array
 			let tagsList = [];
-			if(this.$element.val() != '') {
+			if (this.$element.val() != '') {
 				tagsList = this.$element.val().split(this.settings.delimiter);
 			};
 
 			value = $.trim(value);
 
 			// Check if value actually has content
-			if(value === '') {
-				if(options.valueChecks && errorCallback) {
+			if (value === '') {
+				if (options.valueChecks && errorCallback) {
 					this.$formInput.addClass(this.settings.classes.formInputInvalid);
 					errorCallback.call(this, 'emptyvalue');
-					if(this.settings.debug) console.log('encountered error', 'emptyvalue');
+					if (this.settings.debug) console.log('encountered error', 'emptyvalue');
 				}
 				return false;
 			};
 
+			// Check if tag meets length requirements
+			if (value.length < this.settings.minChars) {
+				if (errorCallback) {
+					errorCallback.call(this, 'tooshort');
+					if (this.settings.debug) console.log('encountered error', 'tooshort');
+				}
+				return false;
+			}
+			if (this.settings.maxChars && (value.length > this.settings.maxChars)) {
+				if (errorCallback) {
+					errorCallback.call(this, 'toolong');
+					if (this.settings.debug) console.log('encountered error', 'toolong');
+				}
+				return false;
+			}
+
 			// Check if the tag is unique or not, reject it if not
-			if(options.valueChecks && options.unique) {
+			if (options.valueChecks && options.unique) {
 				const skipTag = this.tagExists(value);
-				if(skipTag) {
+				if (skipTag) {
 					this.$formInput.addClass(this.settings.classes.formInputInvalid);
-					if(errorCallback) {
+					if (errorCallback) {
 						errorCallback.call(this, 'notunique');
-						if(this.settings.debug) console.log('encountered error', 'notunique');
+						if (this.settings.debug) console.log('encountered error', 'notunique');
 					}
 					return false;
 				};
 			};
 
 			// Check if tag is in the allowed options
-			if(options.valueChecks && this.settings.autoComplete.restrictive) {
+			if (options.valueChecks && this.settings.autoComplete.restrictive) {
 				const allowedValues = [];
 				$.each(this.autoCompleteOptions, (i, item) => {
 					allowedValues.push(item.label.toLowerCase());
 				});
-				if($.inArray(value.toLowerCase(), allowedValues) == -1) {
+				if ($.inArray(value.toLowerCase(), allowedValues) == -1) {
 					this.$formInput.addClass(this.settings.classes.formInputInvalid);
-					if(errorCallback) {
+					if (errorCallback) {
 						errorCallback.call(this, 'notpermitted');
-						if(this.settings.debug) console.log('encountered error', 'notpermitted');
+						if (this.settings.debug) console.log('encountered error', 'notpermitted');
 					}
 					return false;
 				}
@@ -363,14 +391,14 @@
 				this.removeTag(value);
 			});
 			this.$tagContainer.append($tag.append($tagLabel).append($tagRemove));
-			
+
 			// Update tags list 
 			tagsList.push(value);
 			this.inputUpdate(this.$element, tagsList);
 
 			// Manage focus
 			this.$formInput.val('');
-			if(options.focus) {
+			if (options.focus) {
 				this.$formInput.trigger('focus');
 			}
 			else {
@@ -378,20 +406,20 @@
 			};
 
 			// Fire callbacks
-			if(options.callback) {
-				if(this.callbacks && this.callbacks['onAddTag']) {
+			if (options.callback) {
+				if (this.callbacks && this.callbacks['onAddTag']) {
 					let func = this.callbacks['onAddTag'];
 					func.call(this, value);
 				}
-				if(this.callbacks && this.callbacks['onChange']) {
+				if (this.callbacks && this.callbacks['onChange']) {
 					let func = this.callbacks['onChange'];
 					func.call(this, this.$element, tagsList[tagsList.length - 1]);
 				}
 			}
 
 		},
-		removeTag: function(value) {
-			if(this.settings.debug) console.log('removeTag', value)
+		removeTag: function (value) {
+			if (this.settings.debug) console.log('removeTag', value)
 
 			// Remove all the visible tags
 			value = unescape(value);
@@ -400,52 +428,54 @@
 			// Build a new tag string, ommitting the one that's to be removed
 			const old = this.$element.val().split(this.settings.delimiter);
 			let str = '';
-			for(let i = 0; i < old.length; i++) {
-				if(old[i] !== value) {
+			for (let i = 0; i < old.length; i++) {
+				if (old[i] !== value) {
 					str += this.settings.delimiter + old[i];
 				}
 			}
 			this.importTags(this.$element, str);
 
 			// Fire callback
-			if(this.callbacks && this.callbacks['onRemoveTag']) {
+			if (this.callbacks && this.callbacks['onRemoveTag']) {
 				let func = this.callbacks['onRemoveTag'];
 				func.call(this, value);
 			}
 		},
-		tagExists: function(value) {
-			if(this.settings.debug) console.log('tagExists', value)
+		tagExists: function (value) {
+			if (this.settings.debug) console.log('tagExists', value)
 			const tagsList = this.$element.val().toLowerCase().split(this.settings.delimiter);
 			return ($.inArray(value.toLowerCase(), tagsList) >= 0);
 		},
-		checkDelimiter: function(event) {
-			if(this.settings.debug) console.log('checkDelimiter', event);
-			if(event.which === 13 || event.which === this.settings.delimiter.charCodeAt(0)) {
+		checkDelimiter: function (event) {
+			if (this.settings.debug) console.log('checkDelimiter', event);
+			if (event.which === 13 || event.which === this.settings.delimiter.charCodeAt(0)) {
 				return true;
 			};
 			return false;
 		},
-		inputUpdate: function($object, tagsList) {
-			if(this.settings.debug) console.log('inputUpdate', $object, tagsList);
+		inputUpdate: function ($object, tagsList) {
+			if (this.settings.debug) console.log('inputUpdate', $object, tagsList);
 			$object.val(tagsList.join(this.settings.delimiter));
 		},
-		importTags: function($object, value) {
-			if(this.settings.debug) console.log('importTags', $object, value);
+		importTags: function ($object, value, userOptions) {
+			if (this.settings.debug) console.log('importTags', $object, value);
+			const defaultOptions = {
+				valueChecks: false,
+				callback: false
+			};
+			const options = $.extend({}, defaultOptions, userOptions);
 			$object.val('');
 
 			// Split up delimited list of tags and process them individually
 			const tags = value.split(this.settings.delimiter);
-			for(let i = 0; i < tags.length; i++) {
-				this.addTag(tags[i], {
-					valueChecks: false,
-					callback: false
-				});
+			for (let i = 0; i < tags.length; i++) {
+				this.addTag(tags[i], options);
 			};
 		}
 	});
-	$.fn[pluginName] = function(options) {
-		return this.each(function() {
-			if(!$.data(this, `plugin_${pluginName}`)) {
+	$.fn[pluginName] = function (options) {
+		return this.each(function () {
+			if (!$.data(this, `plugin_${pluginName}`)) {
 				$.data(this, `plugin_${pluginName}`, new Plugin(this, options));
 			};
 		});
