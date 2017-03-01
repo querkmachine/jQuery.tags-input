@@ -27,7 +27,8 @@
 			formInput: 'tag-input__input',
 			formInputInvalid: 'tag-input__input--invalid',
 			autoComplete: 'tag-input__autocomplete',
-			autoCompleteItem: 'tag-input__autocomplete-item'
+			autoCompleteItem: 'tag-input__autocomplete-item',
+			autoCompleteItemSelected: 'tag-input__autocomplete-item--selected',
 		},
 		l10n: {
 			defaultText: 'Add a tag',
@@ -63,6 +64,7 @@
 		};
 
 		this.autoCompleteOptions;
+		this.currentAutoCompleteOption;
 		this.callbacks = [];
 
 		if (this.settings.debug) console.log('settings', this.settings);
@@ -266,6 +268,43 @@
 						$(item).attr('aria-hidden', 'true');
 					}
 				});
+			});
+			this.$formInput.on('keydown', (e) => {
+				if(e.which !== 38 && e.which !== 40) { return; }
+				e.preventDefault();
+				const $possibleOptions = $autoComplete.children('[aria-hidden="false"]');
+				switch(e.which) {
+					case 38:
+						console.log('go up');
+						if(typeof this.currentAutoCompleteOption == 'undefined') {
+							this.currentAutoCompleteOption = $possibleOptions.length - 1;
+						}
+						else {
+							this.currentAutoCompleteOption = this.currentAutoCompleteOption - 1;
+						}
+					break;
+					case 40:
+						console.log('go down');
+						if(typeof this.currentAutoCompleteOption == 'undefined') {
+							this.currentAutoCompleteOption = 0;
+						}
+						else {
+							this.currentAutoCompleteOption = this.currentAutoCompleteOption + 1;
+						}
+					break;
+				}
+				if($possibleOptions.length === 0) {
+					this.currentAutoCompleteOption = -1;
+				}
+				else if(this.currentAutoCompleteOption < 0) { 
+					this.currentAutoCompleteOption = 0; 
+				}
+				else if(this.currentAutoCompleteOption > $possibleOptions.length - 1) { 
+					this.currentAutoCompleteOption = $possibleOptions.length - 1; 
+				}
+				console.log(this.currentAutoCompleteOption);
+				$(`.${this.settings.classes.autoCompleteItemSelected}`).removeClass(this.settings.classes.autoCompleteItemSelected);
+				$possibleOptions.eq(this.currentAutoCompleteOption).addClass(this.settings.classes.autoCompleteItemSelected);
 			});
 		},
 		doAutosize: function () {
